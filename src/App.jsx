@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from "react";
-
+import Error from "./components/Error.jsx";
 import Places from "./components/Places.jsx";
 import Modal from "./components/Modal.jsx";
 import DeleteConfirmation from "./components/DeleteConfirmation.jsx";
@@ -8,10 +8,9 @@ import AvailablePlaces from "./components/AvailablePlaces.jsx";
 
 function App() {
   const selectedPlace = useRef();
-
   const [userPlaces, setUserPlaces] = useState([]);
-
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [errorUpdatingPlaces, setErrorUpdatingPlaces] = useState();
 
   function handleStartRemovePlace(place) {
     setModalIsOpen(true);
@@ -23,6 +22,7 @@ function App() {
   }
 
   async function handleSelectPlace(selectedPlace) {
+    //avrei potuto mettere qui la fetch put ma utilizzo l'optimistic updating e passo di sotto dopo aver aggiornato lo state
     setUserPlaces((prevPickedPlaces) => {
       if (!prevPickedPlaces) {
         prevPickedPlaces = [];
@@ -36,20 +36,23 @@ function App() {
     try {
       const res = await fetch("http://localhost:3000/user-places", {
         method: "PUT",
-        body: JSON.stringify({places : [selectedPlace, ...userPlaces]}),
+        body: JSON.stringify({ places: [selectedPlace, ...userPlaces] }), //scritto così perchè altrimenti ottengo il vecchio state
         headers: {
           "Content-Type": "application/json",
         },
       });
       const data = await res.json();
-  
+
       if (!res.ok) {
         throw new Error("Failed to update user data");
       }
-      
-      return data.message
+
+      return data.message;
     } catch (error) {
-      
+      setUserPlaces(userPlaces); //rivoglio il precedente state se qualcosa va storto, posso scriverlo così perchè react sta programmando di aggiornarlo in questa funzione
+      setErrorUpdatingPlaces({
+        message: error.message || "Failed to update places.",
+      });
     }
   }
 
@@ -61,8 +64,22 @@ function App() {
     setModalIsOpen(false);
   }, []);
 
+  function handleError() {
+    setErrorUpdatingPlaces(null);
+  }
+
   return (
     <>
+      <Modal open={errorUpdatingPlaces} onClose={handleError}>
+        {errorUpdatingPlaces && (
+          <Error
+            title="An error occured"
+            message={errorUpdatingPlaces.message}
+            onConfirm={handleError}
+          />
+        )}
+      </Modal>
+
       <Modal open={modalIsOpen} onClose={handleStopRemovePlace}>
         <DeleteConfirmation
           onCancel={handleStopRemovePlace}
