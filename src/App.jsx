@@ -12,6 +12,8 @@ function App() {
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [errorUpdatingPlaces, setErrorUpdatingPlaces] = useState();
 
+  //TODO: aggiungi fetch get per i posti già selezionati
+
   function handleStartRemovePlace(place) {
     setModalIsOpen(true);
     selectedPlace.current = place;
@@ -61,8 +63,32 @@ function App() {
       prevPickedPlaces.filter((place) => place.id !== selectedPlace.current.id)
     );
 
+    //TODO: aggiungi DELETE method
+    try {
+      const res = await fetch("http://localhost:3000/user-places", {
+        method: "PUT",
+        body: JSON.stringify({ places: userPlaces.filter((place) => place.id !== selectedPlace.current.id) }), //prova delete
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error("Failed to update user data");
+      }
+
+      setModalIsOpen(false)
+      return data.message;
+    } catch (error) {
+      setUserPlaces(userPlaces); //rivoglio il precedente state se qualcosa va storto, posso scriverlo così perchè react sta programmando di aggiornarlo in questa funzione
+      setErrorUpdatingPlaces({
+        message: error.message || "Failed to update places.",
+      });
+    }
+
     setModalIsOpen(false);
-  }, []);
+  }, [userPlaces]);
 
   function handleError() {
     setErrorUpdatingPlaces(null);
