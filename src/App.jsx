@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import Error from "./components/Error.jsx";
 import Places from "./components/Places.jsx";
 import Modal from "./components/Modal.jsx";
@@ -11,8 +11,31 @@ function App() {
   const [userPlaces, setUserPlaces] = useState([]);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [errorUpdatingPlaces, setErrorUpdatingPlaces] = useState();
+  const [isFetching, setIsFetching] = useState(false);
+  const [error, setError] = useState()
 
   //TODO: aggiungi fetch get per i posti già selezionati
+  useEffect(() => {
+    async function fetchData() {
+      setIsFetching(true);
+      try {
+        const res = await fetch("http://localhost:3000/user-places");
+        const data = await res.json();
+        console.log(data) // questo dà un array da 3
+        setUserPlaces(data.places)
+        console.log(userPlaces) //questo è vuoto perchè?
+        if (!res.ok) {
+          throw new Error("Failed to fetch places");
+        }
+      } catch (error) {
+        setError(error)
+      } finally{
+        setIsFetching(false);
+      }
+    }
+
+    fetchData();
+  }, []);
 
   function handleStartRemovePlace(place) {
     setModalIsOpen(true);
@@ -122,13 +145,15 @@ function App() {
         </p>
       </header>
       <main>
-        <Places
+        {error && <Error title="An error occured" message={error.message} />}
+        {!error && <Places
           title="I'd like to visit ..."
           fallbackText="Select the places you would like to visit below."
           places={userPlaces}
+          loadingText="Fetching your places.."
+          isLoading={isFetching}
           onSelectPlace={handleStartRemovePlace}
-        />
-
+        />}
         <AvailablePlaces onSelectPlace={handleSelectPlace} />
       </main>
     </>
